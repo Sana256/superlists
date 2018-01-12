@@ -5,7 +5,6 @@ from django.http import HttpRequest
 from django.utils.html import escape
 
 from lists.models import Item, List
-from lists.views import home_page
 from lists.forms import ItemForm, ExistingListItemForm, DUPLICATE_ITEM_ERROR, EMPTY_ITEM_ERROR
 
 
@@ -117,6 +116,11 @@ class NewListTest(TestCase):
         new_item = Item.objects.first()
         self.assertEqual(new_item.text, 'A new list item')
 
+
+    def test_redirects_after_POST(self):
+        response = self.client.post('/lists/new', data={'text': 'new list item'})
+        new_list = List.objects.first()
+        self.assertRedirects(response, f'/lists/{new_list.id}/')
 
     def test_for_invalid_input_renders_home_template(self):
         response =self.client.post('/lists/new', data={'text': ''})
