@@ -1,6 +1,8 @@
+import random
+
 from fabric.contrib.files import append, exists, sed
 from fabric.api import cd, env, local, run
-import random
+
 
 REPO_URL = 'https://github.com/sana256/superlists.git'
 
@@ -9,8 +11,8 @@ def deploy():
     run(f'mkdir -p {site_folder}')
     with cd(site_folder):
         _get_latest_source()
-        _update_settings(env.host)
         _update_virtualenv()
+        _create_or_update_dotenv()
         _update_static_file()
         _update_database()
 
@@ -24,22 +26,22 @@ def _get_latest_source():
     run(f'git reset --hard {current_commit}')
 
 
-def _update_settings(site_name):
-    settings_path = 'superlists/settings.py'
-    sed(settings_path, "DEBUG = True", "DEBUG = False")
-    sed(settings_path, 'ALLOWED_HOSTS = .+$', f'ALLOWED_HOSTS = ["{site_name}"]')
-    secret_key_file = 'superlists/secret_key.py'
-    if not exists(secret_key_file):
-        chars = 'abcdefghijklmnoprstuvwxyz0123456789!@#$%^&*()_+=-'
-        key = ''.join(random.SystemRandom().choices(chars, k=50))
-        append(secret_key_file, f'SECRET_KEY = "{key}"')
-    append(settings_path, '\nfrom .secret_key import SECRET_KEY')
-
-
 def _update_virtualenv():
     if not exists('venv/bin/pip'):
         run(f'virtualenv -p /usr/bin/python3.6 venv')
     run('./venv/bin/pip install -r requirements.txt')
+
+
+def _create_or_update_dotenv():
+    append('.env', 'DJANGO_DEBUG_FALSE=y')
+    append('.env', f'SITENAME={env.host}')
+    current_contents = run('cat .env')
+    if 'DJANGO_SECRET_KEY' not in current_contents:
+        chars = 'abcdefghijklmnoprstuvwxyz0123456789!@#$%^&*()_+=-'
+        new_secret = ''.join(random.SystemRandom().choices(chars, k=50))
+        append('.env', f'DJANGO_SECRET_KEY={new_secret}')
+    email_password = os.environ['EMAIL_PASSWORD']
+    append('.env', f'EMAIL_PASSWORD={email_password}')
 
 
 def _update_static_file():
