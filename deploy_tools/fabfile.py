@@ -1,4 +1,4 @@
-import random
+import random, os
 
 from fabric.contrib.files import append, exists, sed
 from fabric.api import cd, env, local, run
